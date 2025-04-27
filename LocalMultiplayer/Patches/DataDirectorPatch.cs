@@ -1,45 +1,28 @@
-﻿using HarmonyLib;
+﻿using com.github.zehsteam.LocalMultiplayer.Steam;
+using HarmonyLib;
 
 namespace com.github.zehsteam.LocalMultiplayer.Patches;
 
 [HarmonyPatch(typeof(DataDirector))]
 internal static class DataDirectorPatch
 {
+    [HarmonyPrefix]
     [HarmonyPatch(nameof(DataDirector.SaveSettings))]
+    private static bool SaveSettingsPatch() => false;
+
     [HarmonyPrefix]
-    private static bool SaveSettingsPatch()
-    {
-        if (!SteamAccountManager.IsUsingSpoofAccount)
-        {
-            return true;
-        }
-
-        return false;
-    }
-
     [HarmonyPatch(nameof(DataDirector.ColorSetBody))]
-    [HarmonyPrefix]
     private static bool ColorSetBodyPatch(int colorID)
     {
-        if (!SteamAccountManager.IsUsingSpoofAccount)
-        {
-            return true;
-        }
-
-        SteamAccountManager.SetCurrentSpoofAccountColor(colorID);
+        SteamAccountManager.SetCurrentAccountColor(colorID);
         return false;
     }
 
-    [HarmonyPatch(nameof(DataDirector.ColorGetBody))]
     [HarmonyPrefix]
+    [HarmonyPatch(nameof(DataDirector.ColorGetBody))]
     private static bool ColorGetBodyPatch(ref int __result)
     {
-        if (!SteamAccountManager.IsUsingSpoofAccount)
-        {
-            return true;
-        }
-
-        __result = SteamAccountManager.SpoofAccount.ColorId;
+        __result = SteamAccountManager.CurrentColorId;
         return false;
     }
 }

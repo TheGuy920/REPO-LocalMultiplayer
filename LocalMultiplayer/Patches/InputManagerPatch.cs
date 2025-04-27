@@ -5,27 +5,11 @@ namespace com.github.zehsteam.LocalMultiplayer.Patches;
 [HarmonyPatch(typeof(InputManager))]
 internal static class InputManagerPatch
 {
+    [HarmonyPrefix]
     [HarmonyPatch(nameof(InputManager.SaveDefaultKeyBindings))]
+    private static bool SaveDefaultKeyBindingsPatch() => false;
+
     [HarmonyPrefix]
-    private static bool SaveDefaultKeyBindingsPatch()
-    {
-        if (!SteamAccountManager.IsUsingSpoofAccount)
-        {
-            return true;
-        }
-
-        return false;
-    }
-
     [HarmonyPatch(nameof(InputManager.SaveCurrentKeyBindings))]
-    [HarmonyPrefix]
-    private static bool SaveCurrentKeyBindingsPatch()
-    {
-        if (!SteamAccountManager.IsUsingSpoofAccount)
-        {
-            return true;
-        }
-
-        return false;
-    }
+    private static bool SaveCurrentKeyBindingsPatch() => false;
 }

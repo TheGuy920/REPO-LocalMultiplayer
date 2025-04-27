@@ -1,4 +1,4 @@
-﻿using com.github.zehsteam.LocalMultiplayer.Helpers;
+﻿using com.github.zehsteam.LocalMultiplayer.Steam;
 using HarmonyLib;
 using Steamworks;
 using Steamworks.Data;
@@ -8,23 +8,15 @@ namespace com.github.zehsteam.LocalMultiplayer.Patches;
 [HarmonyPatch(typeof(MenuPageMain))]
 internal static class MenuPageMainPatch
 {
-    [HarmonyPatch(nameof(MenuPageMain.Start))]
-    [HarmonyPostfix]
-    private static void StartPatch()
-    {
-        SteamAccountManager.UnassignSpoofAccount();
-    }
-
-    [HarmonyPatch(nameof(MenuPageMain.ButtonEventJoinGame))]
     [HarmonyPrefix]
+    [HarmonyPatch(nameof(MenuPageMain.ButtonEventJoinGame))]
     private static bool ButtonEventJoinGamePatch()
     {
-        SteamAccountManager.AssignSpoofAccount();
-
-        PhotonNetworkHelper.SetPhotonServerSettings();
-
-        SteamManager.instance?.OnGameLobbyJoinRequested(new Lobby(GlobalSaveHelper.SteamLobbyId.Value), SteamClient.SteamId);
-
+        var lobbyIdStr = new Friend(SteamAccountManager.OriginalSteamId).GetRichPresence("repo_self_host_lobby_id");
+        if (!ulong.TryParse(lobbyIdStr, out var lobbyId))
+            return false;
+        
+        SteamManager.instance?.OnGameLobbyJoinRequested(new Lobby(lobbyId), SteamAccountManager.CurrentSteamId);
         return false;
     }
 }

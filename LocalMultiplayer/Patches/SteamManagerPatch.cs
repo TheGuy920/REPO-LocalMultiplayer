@@ -1,67 +1,36 @@
-﻿using com.github.zehsteam.LocalMultiplayer.Helpers;
-using HarmonyLib;
+﻿using HarmonyLib;
 using Photon.Pun;
-using Photon.Realtime;
 using Steamworks;
 using Steamworks.Data;
-using System;
-using UnityEngine;
+using com.github.zehsteam.LocalMultiplayer.Steam;
 
 namespace com.github.zehsteam.LocalMultiplayer.Patches;
 
 [HarmonyPatch(typeof(SteamManager))]
 internal static class SteamManagerPatch
 {
+    [HarmonyPostfix]
     [HarmonyPatch(nameof(SteamManager.Awake))]
-    [HarmonyPostfix]
     [HarmonyPriority(Priority.First)]
-    private static void AwakePatch()
-    {
-        SteamAccountManager.Initialize();
-    }
-
-    [HarmonyPatch(nameof(SteamManager.Start))]
+    private static void AwakePatch() => SteamAccountManager.Initialize();
+    
     [HarmonyPostfix]
-    private static void StartPatch()
-    {
-        if (!IsValidClient())
-        {
-            Application.Quit();
-        }
-    }
-
     [HarmonyPatch(nameof(SteamManager.OnLobbyCreated))]
-    [HarmonyPostfix]
     private static void OnLobbyCreatedPatch(ref Result _result, ref Lobby _lobby)
     {
-        if (_result != Result.OK)
-        {
-            return;
-        }
-
-        GlobalSaveHelper.SteamLobbyId.Value = _lobby.Id;
-
-        SteamAccountManager.ResetSpoofAccountsInUse();
+        if (_result != Result.OK) return;
+        SteamFriends.SetRichPresence("repo_self_host_lobby_id", _lobby.Id.ToString());
     }
-
+    
+    [HarmonyPostfix]
     [HarmonyPatch(nameof(SteamManager.SendSteamAuthTicket))]
-    [HarmonyPrefix]
-    private static bool SendSteamAuthTicketPatch()
+    private static void SendSteamAuthTicketPatch()
     {
-        PhotonNetwork.AuthValues = new AuthenticationValues(Guid.NewGuid().ToString());
-        return false;
-    }
-
-    private static bool IsValidClient()
-    {
-        AuthTicket authTicket = SteamManager.instance.steamAuthTicket;
-
-        if (authTicket == null)
-        {
-            return false;
-        }
-
-        BeginAuthResult beginAuthResult = SteamUser.BeginAuthSession(authTicket.Data, SteamClient.SteamId);
-        return beginAuthResult == BeginAuthResult.OK;
+        var token = SteamHelper.AuthTokenHex;
+        if (string.IsNullOrWhiteSpace(token)) return;
+        
+        PhotonNetwork.AuthValues.UserId = SteamAccountManager.CurrentSteamId.ToString();
+        PhotonNetwork.AuthValues.AuthGetParameters = "";
+        PhotonNetwork.AuthValues.AddAuthParameter("ticket", token);
     }
 }
